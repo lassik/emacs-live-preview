@@ -99,7 +99,7 @@ The value can be:
             (display-buffer pre-buf)))))))
 
 (defun live-preview (command)
-  "Turn live preview on or off for this buffer, setting the preview command."
+  "Turn live preview on or off for this buffer and set the preview COMMAND."
   (interactive
    (list (read-from-minibuffer
           "Preview command in this buffer: "

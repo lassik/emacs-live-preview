@@ -106,6 +106,22 @@ The value can be:
             (display-buffer pre-buf)))))))
 
 ;;;###autoload
+(define-minor-mode live-preview-mode
+  "Toggle automatic live preview in a side window.
+
+When this minor mode (Live) is enabled, a live preview of your
+source document is shown in a side window and updated whenever
+you are idle for a few seconds.
+
+Though this minor mode is enabled globally, only buffers that
+have a `live-preview-command' cause a preview to be rendered."
+  :lighter " Live"
+  :global t
+  (cancel-function-timers #'live-preview-show)
+  (when live-preview-mode
+    (run-with-idle-timer 2 t #'live-preview-show)))
+
+;;;###autoload
 (defun live-preview (command)
   "Turn live preview on or off for this buffer and set the preview COMMAND."
   (interactive
@@ -123,22 +139,6 @@ The value can be:
         (t
          (message "Live preview off in this buffer")))
   command)
-
-;;;###autoload
-(define-minor-mode live-preview-mode
-  "Toggle automatic live preview in a side window.
-
-When this minor mode (Live) is enabled, a live preview of your
-source document is shown in a side window and updated whenever
-you are idle for a few seconds.
-
-Though this minor mode is enabled globally, only buffers that
-have a `live-preview-command' cause a preview to be rendered."
-  :lighter " Live"
-  :global t
-  (cancel-function-timers #'live-preview-show)
-  (when live-preview-mode
-    (run-with-idle-timer 2 t #'live-preview-show)))
 
 (provide 'live-preview)
 

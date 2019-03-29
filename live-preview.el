@@ -105,6 +105,7 @@ The value can be:
           (save-selected-window
             (display-buffer pre-buf)))))))
 
+;;;###autoload
 (defun live-preview (command)
   "Turn live preview on or off for this buffer and set the preview COMMAND."
   (interactive

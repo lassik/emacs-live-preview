@@ -31,6 +31,8 @@
 ;;
 ;;; Code:
 
+(require 'subr-x)  ; For string-blank-p.
+
 (defvar live-preview-command-history
   nil "List of old live preview commands.")
 

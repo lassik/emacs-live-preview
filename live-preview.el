@@ -33,6 +33,10 @@
 
 (eval-when-compile (require 'subr-x))  ; For string-blank-p.
 
+(defconst live-preview--buffer-name
+  "*live-preview*"
+  "Name of the special buffer in which live previews are rendered.")
+
 (defvar live-preview-command-history
   nil
   "List of old live preview commands.")
@@ -68,6 +72,14 @@ The value can be:
   function is free to also make other change to the preview
   buffer, such as changing to a suitable major mode.")
 
+(defun live-preview--stop ()
+  "Stop any running live preview rendering process."
+  (with-current-buffer (get-buffer-create live-preview--buffer-name)
+    (when (get-buffer-process (current-buffer))
+      (interrupt-process)
+      (while (process-live-p (get-buffer-process (current-buffer)))
+        (sleep-for 0.1)))))
+
 (defun live-preview-show ()
   "Update the live preview immediately."
   (let ((src-buf (current-buffer))
@@ -75,10 +87,7 @@ The value can be:
         (command live-preview-command))
     (unless (eq src-buf pre-buf)
       (with-current-buffer pre-buf
-        (when (get-buffer-process (current-buffer))
-          (interrupt-process)
-          (while (process-live-p (get-buffer-process (current-buffer)))
-            (sleep-for 0.1)))
+        (live-preview--stop)
         (unless (or (null command)
                     (and (stringp command) (string-blank-p command)))
           (cond ((stringp command)

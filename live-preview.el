@@ -64,7 +64,12 @@ The value can be:
 * nil or a blank string -- No live preview is rendered.
 
 * a string -- A shell command line to render the preview from
-  standard input to standard output.
+  standard input to standard output. Trivial examples are \"cat\"
+  and \"tr a z\". Note that commands like \"make\" do not work
+  because they do not expect to read data from standard input. An
+  example of a complex command is rendering a Unix manual page
+  written in the AsciiDoc markup language: \"asciidoctor -b
+  manpage -o - - | nroff -man | col -bx\".
 
 * a function -- Called with one argument, the source buffer. When
   called, the current buffer is the empty preview buffer. The
@@ -80,8 +85,55 @@ The value can be:
       (while (process-live-p (get-buffer-process (current-buffer)))
         (sleep-for 0.1)))))
 
+(defun live-preview--show-shell (src-buf command)
+  "Internal helper function to render live preview via shell command.
+
+SRC-BUF is the user's source buffer that should be previewed.
+COMMAND is the shell command as a string."
+  (start-process-shell-command
+   "live-preview" (current-buffer) command)
+  (let ((pre-buf (current-buffer))
+        (all-output ""))
+    (set-process-filter
+     (get-buffer-process (current-buffer))
+     (lambda (process new-output)
+       (if (< (length all-output) live-preview-max-buffer-size)
+           (setq all-output (concat all-output new-output))
+         (interrupt-process process))))
+    (set-process-sentinel
+     (get-buffer-process (current-buffer))
+     (lambda (process state)
+       (when (equal "finished\n" state)
+         (with-current-buffer pre-buf
+           (widen)
+           (let ((old-point (point)))
+             (erase-buffer)
+             (insert all-output)
+             (goto-char (goto-char (min old-point (point-max))))
+             (set-marker (process-mark process) (point))
+             (set-mark (point))))))))
+  (let ((input (with-current-buffer src-buf
+                 (save-excursion
+                   (save-restriction
+                     (widen)
+                     (buffer-string))))))
+    (process-send-string nil input)
+    (process-send-eof)))
+
+(defun live-preview--show-function (src-buf userfun)
+  "Internal helper function to render live preview via Lisp function.
+
+SRC-BUF is the user's source buffer that should be previewed.
+USERFUN is the Emacs Lisp function that renders the preview."
+  (save-excursion
+    (erase-buffer)
+    (funcall userfun src-buf)))
+
 (defun live-preview-show ()
-  "Update the live preview immediately."
+  "Update the live preview immediately.
+
+You don't normally need to call this function yourself. This is
+called by a timer whenever you have been idle for a few seconds."
   (live-preview--stop)
   (let ((src-buf (current-buffer))
         (pre-buf (get-buffer-create live-preview--buffer-name))
@@ -91,38 +143,9 @@ The value can be:
                 (and (stringp command) (string-blank-p command)))
       (with-current-buffer pre-buf
         (cond ((stringp command)
-               (start-process-shell-command
-                "live-preview" (current-buffer) command)
-               (let ((all-output ""))
-                 (set-process-filter
-                  (get-buffer-process (current-buffer))
-                  (lambda (process new-output)
-                    (if (< (length all-output) live-preview-max-buffer-size)
-                        (setq all-output (concat all-output new-output))
-                      (interrupt-process process))))
-                 (set-process-sentinel
-                  (get-buffer-process (current-buffer))
-                  (lambda (process state)
-                    (when (equal "finished\n" state)
-                      (with-current-buffer pre-buf
-                        (widen)
-                        (let ((old-point (point)))
-                          (erase-buffer)
-                          (insert all-output)
-                          (goto-char (goto-char (min old-point (point-max))))
-                          (set-marker (process-mark process) (point))
-                          (set-mark (point))))))))
-               (let ((input (with-current-buffer src-buf
-                              (save-excursion
-                                (save-restriction
-                                  (widen)
-                                  (buffer-string))))))
-                 (process-send-string nil input)
-                 (process-send-eof)))
+               (live-preview--show-shell src-buf command))
               ((functionp command)
-               (save-excursion
-                 (erase-buffer)
-                 (funcall command src-buf)))
+               (live-preview--show-function src-buf command))
               (t
                (insert "live-preview-command is not a string or function")))
         (save-selected-window
@@ -136,6 +159,10 @@ When this minor mode (Live) is enabled, a live preview of your
 source document is shown in a side window and updated whenever
 you are idle for a few seconds.
 
+Use the `live-preview' command (M-x live-preview) in any buffer
+to set the preview command for that buffer, or to turn the
+preview off for that buffer.
+
 Though this minor mode is enabled globally, only buffers that
 have a `live-preview-command' cause a preview to be rendered."
   :lighter " Live"
@@ -146,7 +173,18 @@ have a `live-preview-command' cause a preview to be rendered."
 
 ;;;###autoload
 (defun live-preview (command)
-  "Turn live preview on or off for this buffer and set the preview COMMAND."
+  "Turn live preview on or off for this buffer and set the preview COMMAND.
+
+If COMMAND is blank, the preview is turned off. Else it can be a
+string (shell command) or an Emacs Lisp function. Please see the
+documentation for the `live-preview-command' variable for
+details.
+
+If you call this command interactively (i.e. \\<keymap> &
+\\[live-preview]) you can only set a shell command in the
+minibuffer (or leave it blank to turn off the preview for the
+current buffer). If you call this function from Lisp (e.g. a hook
+in your `user-init-file'), you can also set a Lisp function."
   (interactive
    (list (read-from-minibuffer
           "Preview command in this buffer: "

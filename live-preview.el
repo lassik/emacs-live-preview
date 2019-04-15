@@ -56,8 +56,9 @@ generate much more output than was intended.")
   nil
   "Shell command or Emacs Lisp function to render the live preview.
 
-When live-preview-mode is on, this command is run whenever you
-are idle for a few seconds to update the preview.
+This is the preview command for the current buffer. When
+live-preview-mode is on, this command is run whenever you are
+idle for a few seconds to update the preview.
 
 The value can be:
 
@@ -173,18 +174,18 @@ have a `live-preview-command' cause a preview to be rendered."
 
 ;;;###autoload
 (defun live-preview (command)
-  "Turn live preview on or off for this buffer and set the preview COMMAND.
+  "Turn live preview on or off for this buffer and set the preview command.
 
 If COMMAND is blank, the preview is turned off. Else it can be a
 string (shell command) or an Emacs Lisp function. Please see the
 documentation for the `live-preview-command' variable for
 details.
 
-If you call this command interactively (i.e. \\<keymap> &
-\\[live-preview]) you can only set a shell command in the
-minibuffer (or leave it blank to turn off the preview for the
-current buffer). If you call this function from Lisp (e.g. a hook
-in your `user-init-file'), you can also set a Lisp function."
+If you call this command interactively (i.e. \\<global-map>\\[live-preview])
+it will ask you to type a shell command in the minibuffer (you
+can leave it blank to turn off the preview for the current
+buffer). If you call this function from Lisp (e.g. a hook in your
+`user-init-file'), you can also set a Lisp function."
   (interactive
    (list (read-from-minibuffer
           "Preview command in this buffer: "

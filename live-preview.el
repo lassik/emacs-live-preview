@@ -34,7 +34,19 @@
 (eval-when-compile (require 'subr-x))  ; For string-blank-p.
 
 (defvar live-preview-command-history
-  nil "List of old live preview commands.")
+  nil
+  "List of old live preview commands.")
+
+(defvar live-preview-idle-seconds
+  2
+  "How many seconds you have to be idle before live preview is updated.")
+
+(defvar live-preview-max-buffer-size
+  (* 100 1024)
+  "Truncate preview if it is longer than this many characters.
+
+This is meant to guard against rogue preview commands that
+generate much more output than was intended.")
 
 (defvar-local live-preview-command
   nil
@@ -76,7 +88,7 @@ The value can be:
                    (set-process-filter
                     (get-buffer-process (current-buffer))
                     (lambda (process new-output)
-                      (if (< (length all-output) (* 100 1024))
+                      (if (< (length all-output) live-preview-max-buffer-size)
                           (setq all-output (concat all-output new-output))
                         (interrupt-process process))))
                    (set-process-sentinel
@@ -121,7 +133,7 @@ have a `live-preview-command' cause a preview to be rendered."
   :global t
   (cancel-function-timers #'live-preview-show)
   (when live-preview-mode
-    (run-with-idle-timer 2 t #'live-preview-show)))
+    (run-with-idle-timer live-preview-idle-seconds t #'live-preview-show)))
 
 ;;;###autoload
 (defun live-preview (command)

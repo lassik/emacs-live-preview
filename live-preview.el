@@ -82,51 +82,51 @@ The value can be:
 
 (defun live-preview-show ()
   "Update the live preview immediately."
+  (live-preview--stop)
   (let ((src-buf (current-buffer))
-        (pre-buf (get-buffer-create "*live-preview*"))
+        (pre-buf (get-buffer-create live-preview--buffer-name))
         (command live-preview-command))
-    (unless (eq src-buf pre-buf)
+    (unless (or (eq src-buf pre-buf)
+                (null command)
+                (and (stringp command) (string-blank-p command)))
       (with-current-buffer pre-buf
-        (live-preview--stop)
-        (unless (or (null command)
-                    (and (stringp command) (string-blank-p command)))
-          (cond ((stringp command)
-                 (start-process-shell-command
-                  "live-preview" (current-buffer) command)
-                 (let ((all-output ""))
-                   (set-process-filter
-                    (get-buffer-process (current-buffer))
-                    (lambda (process new-output)
-                      (if (< (length all-output) live-preview-max-buffer-size)
-                          (setq all-output (concat all-output new-output))
-                        (interrupt-process process))))
-                   (set-process-sentinel
-                    (get-buffer-process (current-buffer))
-                    (lambda (process state)
-                      (when (equal "finished\n" state)
-                        (with-current-buffer pre-buf
-                          (widen)
-                          (let ((old-point (point)))
-                            (erase-buffer)
-                            (insert all-output)
-                            (goto-char (goto-char (min old-point (point-max))))
-                            (set-marker (process-mark process) (point))
-                            (set-mark (point))))))))
-                 (let ((input (with-current-buffer src-buf
-                                (save-excursion
-                                  (save-restriction
-                                    (widen)
-                                    (buffer-string))))))
-                   (process-send-string nil input)
-                   (process-send-eof)))
-                ((functionp command)
-                 (save-excursion
-                   (erase-buffer)
-                   (funcall command src-buf)))
-                (t
-                 (insert "live-preview-command is not a string or function")))
-          (save-selected-window
-            (display-buffer pre-buf)))))))
+        (cond ((stringp command)
+               (start-process-shell-command
+                "live-preview" (current-buffer) command)
+               (let ((all-output ""))
+                 (set-process-filter
+                  (get-buffer-process (current-buffer))
+                  (lambda (process new-output)
+                    (if (< (length all-output) live-preview-max-buffer-size)
+                        (setq all-output (concat all-output new-output))
+                      (interrupt-process process))))
+                 (set-process-sentinel
+                  (get-buffer-process (current-buffer))
+                  (lambda (process state)
+                    (when (equal "finished\n" state)
+                      (with-current-buffer pre-buf
+                        (widen)
+                        (let ((old-point (point)))
+                          (erase-buffer)
+                          (insert all-output)
+                          (goto-char (goto-char (min old-point (point-max))))
+                          (set-marker (process-mark process) (point))
+                          (set-mark (point))))))))
+               (let ((input (with-current-buffer src-buf
+                              (save-excursion
+                                (save-restriction
+                                  (widen)
+                                  (buffer-string))))))
+                 (process-send-string nil input)
+                 (process-send-eof)))
+              ((functionp command)
+               (save-excursion
+                 (erase-buffer)
+                 (funcall command src-buf)))
+              (t
+               (insert "live-preview-command is not a string or function")))
+        (save-selected-window
+          (display-buffer pre-buf))))))
 
 ;;;###autoload
 (define-minor-mode live-preview-mode

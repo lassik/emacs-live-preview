@@ -127,14 +127,14 @@ COMMAND is the shell command as a string."
          (live-preview--from-scratch
           (lambda ()
             (insert all-output)
-            (set-marker (process-mark process) (point)))))))
-    (let ((input (with-current-buffer src-buf
-                   (save-excursion
-                     (save-restriction
-                       (widen)
-                       (buffer-string))))))
-      (process-send-string nil input)
-      (process-send-eof))))
+            (set-marker (process-mark process) (point))))))))
+  (let ((input (with-current-buffer src-buf
+                 (save-excursion
+                   (save-restriction
+                     (widen)
+                     (buffer-string))))))
+    (process-send-string nil input)
+    (process-send-eof)))
 
 (defun live-preview--show-function (src-buf userfun)
   "Internal helper function to render live preview via Lisp function.

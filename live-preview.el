@@ -86,6 +86,26 @@ The value can be:
       (while (process-live-p (get-buffer-process (current-buffer)))
         (sleep-for 0.1)))))
 
+(defun live-preview--from-scratch (thunk)
+  "Internal helper function to render live preview using THUNK."
+  (with-current-buffer (get-buffer live-preview--buffer-name)
+    (with-selected-window (or (get-buffer-window (current-buffer) t)
+                              (selected-window))
+      (widen)
+      (let ((old-line (line-number-at-pos (point)))
+            (old-column (current-column))
+            (old-start (window-start)))
+        (erase-buffer)
+        (funcall thunk)
+        (widen)
+        (let ((num-lines (count-lines (point-min) (point-max))))
+          (goto-char (point-min))
+          (forward-line (max 0 (1- (min old-line num-lines)))))
+        (let ((line-length (- (point-at-eol) (point-at-bol))))
+          (forward-char (min old-column line-length)))
+        (set-mark (point))
+        (set-window-start nil old-start)))))
+
 (defun live-preview--show-shell (src-buf command)
   "Internal helper function to render live preview via shell command.
 
@@ -93,8 +113,7 @@ SRC-BUF is the user's source buffer that should be previewed.
 COMMAND is the shell command as a string."
   (start-process-shell-command
    "live-preview" (current-buffer) command)
-  (let ((pre-buf (current-buffer))
-        (all-output ""))
+  (let ((all-output ""))
     (set-process-filter
      (get-buffer-process (current-buffer))
      (lambda (process new-output)
@@ -105,30 +124,24 @@ COMMAND is the shell command as a string."
      (get-buffer-process (current-buffer))
      (lambda (process state)
        (when (equal "finished\n" state)
-         (with-current-buffer pre-buf
-           (widen)
-           (let ((old-point (point)))
-             (erase-buffer)
-             (insert all-output)
-             (goto-char (goto-char (min old-point (point-max))))
-             (set-marker (process-mark process) (point))
-             (set-mark (point))))))))
-  (let ((input (with-current-buffer src-buf
-                 (save-excursion
-                   (save-restriction
-                     (widen)
-                     (buffer-string))))))
-    (process-send-string nil input)
-    (process-send-eof)))
+         (live-preview--from-scratch
+          (lambda ()
+            (insert all-output)
+            (set-marker (process-mark process) (point)))))))
+    (let ((input (with-current-buffer src-buf
+                   (save-excursion
+                     (save-restriction
+                       (widen)
+                       (buffer-string))))))
+      (process-send-string nil input)
+      (process-send-eof))))
 
 (defun live-preview--show-function (src-buf userfun)
   "Internal helper function to render live preview via Lisp function.
 
 SRC-BUF is the user's source buffer that should be previewed.
 USERFUN is the Emacs Lisp function that renders the preview."
-  (save-excursion
-    (erase-buffer)
-    (funcall userfun src-buf)))
+  (live-preview--from-scratch (lambda () (funcall userfun src-buf))))
 
 (defun live-preview-show ()
   "Update the live preview immediately.

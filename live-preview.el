@@ -189,8 +189,8 @@ buffer). If you call this function from Lisp (e.g. a hook in your
   (interactive
    (list (read-from-minibuffer
           "Preview command in this buffer: "
-          live-preview-command nil nil
-          'live-preview-command-history)))
+          (and (stringp live-preview-command) live-preview-command)
+          nil nil 'live-preview-command-history)))
   (setq command (unless (and (stringp command) (string-blank-p command))
                   command))
   (setq-local live-preview-command command)

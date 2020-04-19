@@ -102,7 +102,7 @@ The value can be:
           (goto-char (point-min))
           (forward-line (max 0 (1- (min old-line num-lines)))))
         (let ((line-length (- (point-at-eol) (point-at-bol))))
-          (forward-char (min old-column line-length)))
+          (forward-char (min old-column (1- line-length))))
         (set-mark (point))
         (set-window-start nil old-start)))))
 

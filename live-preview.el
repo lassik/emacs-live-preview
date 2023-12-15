@@ -1,5 +1,5 @@
 ;;; live-preview.el --- Live preview by any shell command while editing -*- lexical-binding: t -*-
-;;
+
 ;; Copyright 2019 Lassi Kortela
 ;; SPDX-License-Identifier: ISC
 ;; Author: Lassi Kortela <lassi@lassi.io>
@@ -7,28 +7,28 @@
 ;; Version: 0.1.2
 ;; Package-Requires: ((emacs "24.4"))
 ;; Keywords: languages util
-;;
+
 ;; This file is not part of GNU Emacs.
-;;
+
 ;;; Commentary:
-;;
+
 ;; Renders a live preview of whatever you are editing in a side
 ;; window.
-;;
+
 ;; You can give any shell command or Emacs Lisp function to render the
 ;; preview. The preview is rendered whenever you are idle for a few
 ;; seconds. Different buffers can have different preview commands.
 ;; There is only one global preview buffer; whenever you go idle in a
 ;; buffer that has a preview command, the preview buffer is updated
 ;; with a preview of that buffer.
-;;
+
 ;; This is useful for previewing e.g. manual pages or other
 ;; documentation while writing them. Instead of a preview, could also
 ;; run a validator or crunch some statistics.
-;;
+
 ;; Maybe in the future: graphics support (e.g. render HTML or TeX as
 ;; an image and show it in Emacs).
-;;
+
 ;;; Code:
 
 (eval-when-compile (require 'subr-x))  ; For string-blank-p.

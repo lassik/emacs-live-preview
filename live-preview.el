@@ -105,7 +105,7 @@ The value can be:
           (let ((line-length (- (point-at-eol) (point-at-bol))))
             (forward-char (min old-column (1- line-length))))
           (set-mark (point))
-          (set-window-start nil old-start))))))
+          (set-window-start nil (min old-start (point-max))))))))
 
 (defun live-preview--show-shell (src-buf command)
   "Internal helper function to render live preview via shell command.
